@@ -1,89 +1,77 @@
 import streamlit as st
 import time
 import pandas as pd
-import plotly.express as px
-from datetime import datetime
 
-# --- Configuración de página ---
-st.set_page_config(page_title="FocusUp", page_icon="📚", layout="wide")
+# Configuración de página
+st.set_page_config(page_title="FocusUp", page_icon="📚", layout="centered")
 
-# --- Variables de sesión ---
+# Variables de sesión
+if "page" not in st.session_state:
+    st.session_state.page = "home"
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 if "study_time" not in st.session_state:
     st.session_state.study_time = 0
-if "mood_log" not in st.session_state:
-    st.session_state.mood_log = []
-if "timer_running" not in st.session_state:
-    st.session_state.timer_running = False
+if "moods" not in st.session_state:
+    st.session_state.moods = []
 
-# --- Encabezado ---
-st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📚 FocusUp</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center;'>✨ Estudia con enfoque y bienestar ✨</h4>", unsafe_allow_html=True)
-st.markdown("---")
+# ---- LANDING PAGE ----
+if st.session_state.page == "home":
+    st.markdown(
+        """
+        <div style="text-align:center; padding:50px">
+            <h1 style="color:#4CAF50;">📚 FocusUp</h1>
+            <h3>Tu guía para estudiar con enfoque y bienestar ✨</h3>
+            <p style="color:gray;">Organiza tu tiempo, gestiona tu ánimo y alcanza tus metas</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    if st.button("🚀 Comenzar", use_container_width=True):
+        st.session_state.page = "app"
 
-# --- Frase motivacional ---
-st.success("🌟 *“El éxito es la suma de pequeños esfuerzos repetidos cada día.”*")
+# ---- MAIN APP ----
+elif st.session_state.page == "app":
+    st.title("📚 FocusUp")
+    st.write("✨ Bienvenido de nuevo, ¿listo para concentrarte?")
 
-# --- Registro de estado emocional ---
-st.header("📝 Registro de Estado Emocional")
-mood = st.radio("¿Cómo te sientes ahora?", ["😊 Bien", "😐 Normal", "😟 Cansado", "😢 Triste"], horizontal=True)
-if st.button("Registrar estado"):
-    st.session_state.mood_log.append((datetime.now(), mood))
-    st.success(f"Estado registrado: {mood}")
+    # Estado emocional
+    st.subheader("📝 Estado Emocional")
+    mood = st.radio("¿Cómo te sientes?", ["😊 Bien", "😐 Normal", "😟 Cansado", "😢 Triste"], horizontal=True)
+    if st.button("Registrar estado"):
+        st.session_state.moods.append(mood)
+        st.success("Estado registrado correctamente ✅")
 
-# Mostrar gráfico de estados
-if st.session_state.mood_log:
-    df_moods = pd.DataFrame(st.session_state.mood_log, columns=["Tiempo", "Estado"])
-    mood_counts = df_moods["Estado"].value_counts().reset_index()
-    mood_counts.columns = ["Estado", "Cantidad"]
-    fig = px.bar(mood_counts, x="Estado", y="Cantidad", title="Historial de Estados Emocionales",
-                 color="Estado", text="Cantidad")
-    st.plotly_chart(fig, use_container_width=True)
+    # Pomodoro
+    st.subheader("⏳ Modo Enfoque")
+    study = st.slider("Minutos de estudio", 10, 60, 25)
+    if st.button("▶️ Iniciar Pomodoro"):
+        with st.spinner("Estudiando..."):
+            for sec in range(5):  # 🔹 Simulación rápida de 5 seg
+                mins, s = divmod(sec, 60)
+                st.metric("Tiempo", f"{mins:02}:{s:02}")
+                time.sleep(1)
+        st.session_state.study_time += study
+        st.success(f"¡Listo! Estudiaste {study} minutos 🎉")
 
-# --- Modo enfoque (Pomodoro) ---
-st.header("⏳ Modo Enfoque (Pomodoro)")
-col1, col2 = st.columns(2)
-
-with col1:
-    study_minutes = st.slider("Duración de estudio (min)", 10, 60, 25)
-    break_minutes = st.slider("Duración del descanso (min)", 3, 15, 5)
-
-with col2:
-    if st.button("▶️ Iniciar sesión"):
-        st.session_state.timer_running = True
-        total_seconds = study_minutes * 60
-        start = time.time()
-        while time.time() - start < total_seconds:
-            elapsed = int(time.time() - start)
-            remaining = total_seconds - elapsed
-            mins, secs = divmod(remaining, 60)
-            timer_text = f"{mins:02d}:{secs:02d}"
-            st.metric("⏰ Tiempo restante", timer_text)
-            time.sleep(1)
-        st.session_state.study_time += study_minutes
-        st.success(f"✅ ¡Sesión completada! {study_minutes} min de estudio + {break_minutes} min de descanso")
-        st.session_state.timer_running = False
-
-# --- Microtareas ---
-st.header("📌 Microtareas Diarias")
-new_task = st.text_input("Agregar nueva tarea")
-if st.button("➕ Añadir tarea"):
-    if new_task:
-        st.session_state.tasks.append({"task": new_task, "done": False})
-
-for i, task in enumerate(st.session_state.tasks):
-    col1, col2 = st.columns([0.8, 0.2])
-    with col1:
-        st.write("✔️" if task["done"] else "⬜", task["task"])
-    with col2:
-        if not task["done"]:
-            if st.button("Hecho", key=f"done_{i}"):
+    # Microtareas
+    st.subheader("📌 Microtareas")
+    new_task = st.text_input("Nueva tarea")
+    if st.button("➕ Añadir"):
+        if new_task:
+            st.session_state.tasks.append({"task": new_task, "done": False})
+    for i, t in enumerate(st.session_state.tasks):
+        cols = st.columns([0.8,0.2])
+        cols[0].write(("✔️ " if t["done"] else "⬜ ") + t["task"])
+        if not t["done"]:
+            if cols[1].button("Hecho", key=i):
                 st.session_state.tasks[i]["done"] = True
 
-# --- Métricas de progreso ---
-st.header("📊 Métricas de Progreso")
-st.write(f"⏱️ Tiempo total de estudio: **{st.session_state.study_time} min**")
-st.write(f"📌 Tareas completadas: **{sum(t['done'] for t in st.session_state.tasks)} / {len(st.session_state.tasks)}**")
-st.write(f"📝 Estados emocionales registrados: **{len(st.session_state.mood_log)}**")
+    # Métricas
+    st.subheader("📊 Progreso")
+    st.info(f"⏱️ Tiempo total: {st.session_state.study_time} min")
+    st.info(f"📌 Tareas completadas: {sum(t['done'] for t in st.session_state.tasks)} / {len(st.session_state.tasks)}")
+    st.info(f"📝 Estados registrados: {len(st.session_state.moods)}")
 
+    if st.button("⬅️ Volver al inicio", use_container_width=True):
+        st.session_state.page = "home"
